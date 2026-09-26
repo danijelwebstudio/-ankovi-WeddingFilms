@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+<rect width="1600" height="900" fill="#F3F0ED"/>
+<rect x="1" y="1" width="1598" height="898" fill="none" stroke="#121212" stroke-opacity=".14"/>
+<circle cx="1000" cy="298" r="282" fill="#121212" fill-opacity=".035"/>
+<path d="M0 668 C 420 600, 860 796, 1600 587 L 1600 900 L 0 900 Z" fill="#121212" fill-opacity=".028"/>
+<line x1="84" y1="110" x2="230" y2="110" stroke="#2B060E" stroke-width="2"/>
+<text x="84" y="760" fill="#121212" fill-opacity=".92" font-family="Georgia, serif" font-size="74">LEA & STEFAN</text>
+<text x="88" y="812" fill="#121212" fill-opacity=".46" font-family="Arial, sans-serif" font-size="18" letter-spacing="4">DEVELOPMENT FILM PLACEHOLDER · 04</text>
+</svg>
