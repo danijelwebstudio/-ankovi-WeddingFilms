@@ -22,17 +22,89 @@
     }
 
     if (!reducedMotion) {
+      /* Standard quiet reveals for sections that don't have a custom sequence. */
       gsap.utils.toArray(".reveal").forEach(el => {
+        if (el.matches(".about-copy, .about-media, .film-project")) return;
+
         gsap.fromTo(el,
-          { y: 32, autoAlpha: 0 },
+          { y: 28, autoAlpha: 0 },
+          {
+            y: 0,
+            autoAlpha: 1,
+            duration: .88,
+            ease: "power3.out",
+            scrollTrigger: { trigger: el, start: "top 87%", once: true }
+          }
+        );
+      });
+
+      /* About: copy arrives first, portrait follows half a beat later. */
+      const aboutCopy = document.querySelector(".about-copy");
+      const aboutMedia = document.querySelector(".about-media");
+
+      if (aboutCopy) {
+        const copyParts = [
+          aboutCopy.querySelector(".eyebrow"),
+          aboutCopy.querySelector(".section-title"),
+          aboutCopy.querySelector(".lede"),
+          ...aboutCopy.querySelectorAll(".body-copy p")
+        ].filter(Boolean);
+
+        gsap.fromTo(copyParts,
+          { y: 24, autoAlpha: 0 },
           {
             y: 0,
             autoAlpha: 1,
             duration: .9,
+            stagger: .085,
             ease: "power3.out",
-            scrollTrigger: { trigger: el, start: "top 86%", once: true }
+            scrollTrigger: { trigger: aboutCopy, start: "top 84%", once: true }
           }
         );
+      }
+
+      if (aboutMedia) {
+        const portrait = aboutMedia.querySelector("img");
+        const tl = gsap.timeline({
+          scrollTrigger: { trigger: aboutMedia, start: "top 86%", once: true }
+        });
+
+        tl.fromTo(aboutMedia,
+          { y: 38, autoAlpha: 0, clipPath: "inset(7% 0 5% 0)" },
+          { y: 0, autoAlpha: 1, clipPath: "inset(0% 0 0% 0)", duration: 1.05, ease: "power3.out" }
+        );
+
+        if (portrait) {
+          tl.fromTo(portrait,
+            { scale: 1.045 },
+            { scale: 1, duration: 1.15, ease: "power3.out" },
+            0
+          );
+        }
+      }
+
+      /* Films: reveal the frame first, then metadata. No aggressive zoom. */
+      gsap.utils.toArray(".film-project").forEach(project => {
+        const media = project.querySelector(".film-media");
+        const meta = project.querySelector(".film-meta");
+        if (!media) return;
+
+        const tl = gsap.timeline({
+          scrollTrigger: { trigger: project, start: "top 88%", once: true }
+        });
+
+        tl.fromTo(media,
+          { y: 24, autoAlpha: .55, clipPath: "inset(5% 0 5% 0)" },
+          { y: 0, autoAlpha: 1, clipPath: "inset(0% 0 0% 0)", duration: 1, ease: "power3.out" }
+        );
+
+        if (meta) {
+          tl.fromTo(meta,
+            { y: 14, autoAlpha: 0 },
+            { y: 0, autoAlpha: 1, duration: .72, ease: "power3.out" },
+            .2
+          );
+        }
       });
     }
 
@@ -54,16 +126,16 @@
     }
 
     const introItems = gsap.utils.toArray(".reveal-item");
-    gsap.set(introItems, { y: 26, autoAlpha: 0 });
+    gsap.set(introItems, { y: 24, autoAlpha: 0 });
     gsap.timeline({ defaults: { ease: "power3.out" } })
-      .to(introItems, { y: 0, autoAlpha: 1, duration: 1.05, stagger: .11 }, .2);
+      .to(introItems, { y: 0, autoAlpha: 1, duration: 1.02, stagger: .1 }, .2);
 
     const heroTimeline = gsap.timeline({
       scrollTrigger: {
         trigger: heroStage,
         start: "top top",
         end: "bottom bottom",
-        scrub: .8,
+        scrub: .72,
         onUpdate(self) {
           header.classList.toggle("is-light", self.progress > .78);
         }
@@ -71,11 +143,11 @@
     });
 
     heroTimeline
-      .to(heroShell, { scale: .978, borderRadius: "12px", ease: "none" }, 0)
-      .to(heroContent, { y: -20, autoAlpha: .34, ease: "none" }, 0);
+      .to(heroShell, { scale: .972, borderRadius: "18px", ease: "none" }, 0)
+      .to(heroContent, { y: -26, autoAlpha: .28, ease: "none" }, 0);
 
     if (heroVideo) {
-      heroTimeline.to(heroVideo, { scale: 1.045, ease: "none" }, 0);
+      heroTimeline.to(heroVideo, { scale: 1.055, ease: "none" }, 0);
     }
   }
 

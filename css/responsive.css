@@ -127,20 +127,8 @@
     width: 86%;
   }
 
-  .testimonial-stage {
-    min-height: 500px;
-  }
-
   .site-footer__inner {
-    grid-template-columns: 1fr 1fr;
-    padding-block: 18px;
-  }
-
-  .site-footer__center { justify-self: end; }
-  .site-footer__end {
-    grid-column: 1 / -1;
-    justify-self: start;
-    text-align: left;
+    min-height: 210px;
   }
 }
 
@@ -253,19 +241,23 @@
   }
 
   .section--testimonials {
-    min-height: auto;
+    min-height: 0;
+    padding-top: 82px;
+    padding-bottom: 82px;
+  }
+
+  .section--testimonials .section-intro {
+    margin-bottom: 26px;
   }
 
   .testimonial-stage {
     min-height: 0;
+    padding-top: 36px;
   }
 
   .testimonial {
     position: relative;
-    inset: auto;
     display: none;
-    opacity: 1;
-    pointer-events: auto;
   }
 
   .testimonial.is-active {
@@ -273,22 +265,21 @@
   }
 
   .testimonial blockquote {
-    max-width: 19ch;
-    font-size: clamp(2.05rem, 9.2vw, 3rem);
-    line-height: 1.01;
+    max-width: 16ch;
+    font-size: clamp(1.95rem, 8.3vw, 2.65rem);
+    line-height: 1.03;
   }
 
   .testimonial footer {
-    margin-top: 28px;
+    margin-top: 22px;
   }
 
   .testimonial-controls {
     position: relative;
-    left: auto;
+    top: auto;
     right: auto;
-    bottom: auto;
     width: fit-content;
-    margin-top: 34px;
+    margin-top: 30px;
   }
 
   .faq-item summary {
@@ -360,16 +351,25 @@
   }
 
   .site-footer__inner {
-    grid-template-columns: 1fr;
-    gap: 28px;
     min-height: auto;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 34px;
+    padding-top: 58px;
+    padding-bottom: 46px;
   }
 
-  .site-footer__center,
-  .site-footer__end {
-    grid-column: auto;
+  .site-footer__center {
+    position: static;
+    transform: none;
     justify-self: start;
+  }
+
+  .site-footer__end {
+    margin-left: 0;
+    align-items: flex-start;
     text-align: left;
+    gap: 14px;
   }
 
   .film-modal {
@@ -394,5 +394,28 @@
   .calendar-day {
     min-height: 52px;
     font-size: 13px;
+  }
+}
+
+@media (max-width: 620px) {
+  .film-sound-toggle {
+    top: 12px;
+    right: 12px;
+    font-size: 9px;
+    padding: 6px 0 5px !important;
+    background: rgba(18,18,18,.38) !important;
+  }
+}
+
+/* Final polish: keep About portrait natural on tablet/mobile. */
+@media (max-width: 860px) {
+  .about-media {
+    overflow: hidden;
+  }
+}
+
+@media (max-width: 620px) {
+  .about-media {
+    margin-top: 34px;
   }
 }

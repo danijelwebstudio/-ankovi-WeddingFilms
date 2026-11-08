@@ -36,21 +36,21 @@ window.CWF_TRANSLATIONS = {
         body: "Depending on the agreement, delivery may include a documentary film, teaser and short reels. Final films usually run from around 20 minutes to one hour, with the main delivery target within two months."
       }
     },
-    films: { label: "PORTFOLIO", heading: "SELECTED WEDDINGS", copy: "A small selection of stories. The films stay in focus; everything around them stays quiet.", watch: "WATCH FILM" },
+    films: { label: "PORTFOLIO", heading: "SELECTED WEDDINGS", copy: "A small selection of stories. The films stay in focus; everything around them stays quiet.", watch: "WATCH FILM", soundOn: "SOUND ON", soundOff: "SOUND OFF" },
     testimonials: {
       label: "WORDS FROM OUR COUPLES",
-      placeholder: "TESTIMONIAL PLACEHOLDER",
+      placeholder: "REVIEW PLACEHOLDER",
       1: {
-        quote: "A real couple's words will live here.",
-        meta: "COUPLE NAME · LOCATION · YEAR"
+        quote: "Everything felt calm and natural. The film brought us straight back to the atmosphere of that day.",
+        meta: "PLACEHOLDER REVIEW"
       },
       2: {
-        quote: "A real review about the experience will live here.",
-        meta: "COUPLE NAME · LOCATION · YEAR"
+        quote: "We never felt like we were performing for the camera. The final film simply feels like us.",
+        meta: "PLACEHOLDER REVIEW"
       },
       3: {
-        quote: "This placeholder will be replaced with a real client review.",
-        meta: "COUPLE NAME · LOCATION · YEAR"
+        quote: "The music, voices and small moments were connected exactly the way we hoped to remember them.",
+        meta: "PLACEHOLDER REVIEW"
       }
     },
     faq: {
@@ -139,21 +139,21 @@ window.CWF_TRANSLATIONS = {
         body: "U zavisnosti od dogovora, isporuka može uključiti dokumentarni film, teaser i kratke reels formate. Glavni film najčešće traje od oko 20 minuta do jednog sata, sa ciljem isporuke u roku do dva meseca."
       }
     },
-    films: { label: "PORTFOLIO", heading: "ODABRANA VENČANJA", copy: "Mali izbor priča. Film ostaje u centru, a sve oko njega ostaje mirno.", watch: "POGLEDAJ FILM" },
+    films: { label: "PORTFOLIO", heading: "ODABRANA VENČANJA", copy: "Mali izbor priča. Film ostaje u centru, a sve oko njega ostaje mirno.", watch: "POGLEDAJ FILM", soundOn: "UKLJUČI ZVUK", soundOff: "ISKLJUČI ZVUK" },
     testimonials: {
       label: "REČI NAŠIH PAROVA",
-      placeholder: "TESTIMONIAL PLACEHOLDER",
+      placeholder: "PRIVREMENA RECENZIJA",
       1: {
-        quote: "Ovde će biti reči stvarnog para.",
-        meta: "IME PARA · LOKACIJA · GODINA"
+        quote: "Sve je bilo mirno i prirodno. Film nas je odmah vratio u atmosferu tog dana.",
+        meta: "PRIVREMENA RECENZIJA"
       },
       2: {
-        quote: "Ovde će biti stvarni utisak o saradnji.",
-        meta: "IME PARA · LOKACIJA · GODINA"
+        quote: "Nismo imali osećaj da igramo za kameru. Finalni film jednostavno izgleda kao mi.",
+        meta: "PRIVREMENA RECENZIJA"
       },
       3: {
-        quote: "Ovaj placeholder biće zamenjen pravom recenzijom klijenta.",
-        meta: "IME PARA · LOKACIJA · GODINA"
+        quote: "Muzika, glasovi i mali trenuci spojeni su baš onako kako smo želeli da pamtimo venčanje.",
+        meta: "PRIVREMENA RECENZIJA"
       }
     },
     faq: {
