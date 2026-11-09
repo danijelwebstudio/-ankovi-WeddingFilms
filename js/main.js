@@ -201,6 +201,33 @@
       index = (index + 1) % items.length;
       render();
     });
+
+    // Native mobile swipe for testimonials; no separate script is needed.
+    const stage = document.querySelector(".section--testimonials .testimonial-stage");
+    if (!stage) return;
+    let touchStart = null;
+    stage.addEventListener("touchstart", event => {
+      touchStart = null;
+      if (event.touches.length !== 1 || event.target.closest("button, a")) return;
+      const touch = event.touches[0];
+      touchStart = { id: touch.identifier, x: touch.clientX, y: touch.clientY };
+    }, { passive: true });
+
+    stage.addEventListener("touchend", event => {
+      if (!touchStart) return;
+      const start = touchStart;
+      touchStart = null;
+      const touch = Array.from(event.changedTouches).find(t => t.identifier === start.id);
+      if (!touch) return;
+      const dx = touch.clientX - start.x;
+      const dy = touch.clientY - start.y;
+      if (Math.abs(dx) < 48 || Math.abs(dx) <= Math.abs(dy) * 1.35) return;
+      // Use the same navigation state and counter as existing arrow buttons.
+      index = (index + (dx < 0 ? 1 : items.length - 1)) % items.length;
+      render();
+    }, { passive: true });
+
+    stage.addEventListener("touchcancel", () => { touchStart = null; }, { passive: true });
   }
 
   function initForm() {

@@ -1,0 +1,21 @@
+/* CWF: portrait footage is 9:16, never stretch/crop it into the 16:9 grid. */
+.film-project[data-film="bw-film"] {
+  width: min(100%, 420px);
+  align-self: flex-end;
+}
+.film-project[data-film="bw-film"] .film-media {
+  aspect-ratio: 9 / 16;
+  background: #121212;
+}
+.film-project[data-film="bw-film"] .film-media video,
+.film-project[data-film="bw-film"] .film-media .film-poster {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+@media (max-width: 767px) {
+  .film-project[data-film="bw-film"] {
+    width: min(82vw, 420px);
+    align-self: center;
+  }
+}

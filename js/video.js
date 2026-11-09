@@ -1,296 +1,348 @@
 (() => {
+  'use strict';
+
+  // CWF video stability patch — no cutting, seeking or timed restarting of films.
+  // Play only one portfolio preview at a time to avoid simultaneous large downloads.
+  const ENTER_RATIO = 0.22;
+  const KEEP_RATIO = 0.10;
+  const SWITCH_ADVANTAGE = 0.22;
+
   let lastFocused = null;
+  let activeProject = null;
   let activeSoundVideo = null;
   let updateVisiblePlayback = () => {};
 
-  // A preview repeats its FIRST 12 seconds without creating a new video file.
-  // When SOUND ON is selected, the original soundtrack is allowed to continue.
-  const PREVIEW_SECONDS = 12;
-  const START_RATIO = 0.15;
-  const STOP_RATIO = 0.05;
-
-  function dict() {
-    const lang = document.documentElement.dataset.lang || "en";
+  function dictionary() {
+    const lang = document.documentElement.dataset.lang || 'en';
     return window.CWF_TRANSLATIONS?.[lang]?.films || {};
   }
 
   function setSoundButton(project, soundOn) {
-    const button = project.querySelector("[data-film-sound]");
-    const label = button?.querySelector("[data-film-sound-label]");
+    const button = project.querySelector('[data-film-sound]');
+    const label = button?.querySelector('[data-film-sound-label]');
     if (!button || !label) return;
-
-    label.dataset.i18n = soundOn ? "films.soundOff" : "films.soundOn";
-    label.textContent = soundOn ? (dict().soundOff || "SOUND OFF") : (dict().soundOn || "SOUND ON");
-    button.setAttribute("aria-label", label.textContent);
-    button.classList.toggle("is-on", soundOn);
-  }
-
-  function startPreview(project) {
-    const video = project.querySelector("[data-film-preview]");
-    const media = project.querySelector(".film-media");
-    if (!video) return;
-
-    // Set these values only once: returning to the section must NOT reset
-    // the movie position, SOUND ON choice, or the visible video frame.
-    if (project.dataset.previewStarted !== "true") {
-      project.dataset.previewStarted = "true";
-      video.muted = true;
-      video.playsInline = true;
-    }
-    if (!video.paused) return;
-
-    video.play()
-      .then(() => media?.classList.add("is-playing"))
-      .catch(() => {
-        // Playback may be blocked by the browser or cancelled by a pause.
-        // Leave the last frame visible; retry when it becomes visible again.
-      });
+    label.dataset.i18n = soundOn ? 'films.soundOff' : 'films.soundOn';
+    label.textContent = soundOn
+      ? (dictionary().soundOff || 'SOUND OFF')
+      : (dictionary().soundOn || 'SOUND ON');
+    button.setAttribute('aria-label', label.textContent);
+    button.classList.toggle('is-on', soundOn);
   }
 
   function mutePreview(project) {
-    const video = project.querySelector("[data-film-preview]");
+    const video = project.querySelector('[data-film-preview]');
     if (!video) return;
     video.muted = true;
     if (activeSoundVideo === video) activeSoundVideo = null;
     setSoundButton(project, false);
   }
 
-  function muteAllPreviews(exceptVideo = null) {
-    document.querySelectorAll(".film-project").forEach(project => {
-      const video = project.querySelector("[data-film-preview]");
-      if (!video || video === exceptVideo) return;
-      mutePreview(project);
-    });
-  }
-
-  function togglePreviewSound(project) {
-    const video = project.querySelector("[data-film-preview]");
-    if (!video) return;
-
-    if (project.dataset.previewStarted !== "true" || video.paused) {
-      project.dataset.previewStarted = "true";
-      video.play().catch(() => {});
-      project.querySelector(".film-media")?.classList.add("is-playing");
-    }
-
-    if (video.muted) {
-      muteAllPreviews(video);
-      video.muted = false;
-      video.volume = 1;
-      activeSoundVideo = video;
-      setSoundButton(project, true);
-    } else {
-      video.muted = true;
-      activeSoundVideo = null;
-      setSoundButton(project, false);
+  function muteAllPreviews(projects, except = null) {
+    for (const project of projects) {
+      if (project !== except) mutePreview(project);
     }
   }
 
-  function projectSource(project) {
-    return project.dataset.fullSrc
-      || project.querySelector("[data-film-preview] source")?.getAttribute("src")
-      || project.querySelector("[data-film-preview]")?.getAttribute("src")
-      || "";
-  }
-
-  function openModal(project) {
-    const modal = document.querySelector("[data-film-modal]");
-    const video = modal?.querySelector(".film-modal__video");
-    if (!modal || !video) return;
-
-    const source = projectSource(project);
-    const title = project.querySelector(".film-meta h3")?.textContent?.trim() || "WEDDING FILM";
-    const location = project.querySelector(".film-meta p")?.textContent?.trim() || "";
-    if (!source) return;
-
-    lastFocused = document.activeElement;
-    muteAllPreviews();
-
-    modal.querySelector("[data-film-title]").textContent = title;
-    modal.querySelector("[data-film-location]").textContent = location;
-    video.src = source;
-    video.muted = false;
-    video.volume = 1;
-
-    modal.classList.add("is-open");
-    modal.setAttribute("aria-hidden", "false");
-    document.body.classList.add("modal-open");
-    modal.querySelector("[data-film-close]")?.focus();
-    updateVisiblePlayback(); // Pause Hero and ALL previews behind the modal.
-
-    // Opening the modal is a user gesture, so browsers generally allow sound here.
-    video.play().catch(() => {});
-  }
-
-  function closeModal() {
-    const modal = document.querySelector("[data-film-modal]");
-    const video = modal?.querySelector(".film-modal__video");
-    if (!modal || !video) return;
-
-    modal.classList.remove("is-open");
-    modal.setAttribute("aria-hidden", "true");
-    document.body.classList.remove("modal-open");
-    video.pause();
-    video.removeAttribute("src");
-    video.load();
-    lastFocused?.focus();
-    updateVisiblePlayback(); // Resume only what is visible after closing.
-  }
-
-  function initPreviewAutoplay() {
-    const projects = [...document.querySelectorAll(".film-project")];
-    const heroVideo = document.querySelector("[data-hero-video]");
-    const heroTarget = document.querySelector("[data-hero-shell]") || heroVideo;
-    const observed = projects.concat(heroTarget ? [heroTarget] : []);
-    const inView = new Map();
-
-    // No extra posters are created or substituted. Existing visuals stay put.
-    projects.forEach(project => {
-      const poster = project.querySelector(".film-poster");
-      poster?.addEventListener("error", () => { poster.hidden = true; }, { once: true });
-      setSoundButton(project, false);
-      const video = project.querySelector("[data-film-preview]");
-      if (!video) return;
-      video.playsInline = true;
-
-      // A short HTML/JS preview is just a playback window into the same file.
-      // Original footage, resolution, soundtrack and full-film modal are untouched.
-      video.addEventListener("timeupdate", () => {
-        if (!video.muted || video.paused || video.currentTime < PREVIEW_SECONDS) return;
-        if (Number.isFinite(video.duration) && video.duration > PREVIEW_SECONDS) {
-          try { video.currentTime = 0; } catch { /* not seekable yet */ }
-        }
-      });
-    });
-
-    // A visitor who explicitly enabled Data Saver or reduced motion should
-    // not be forced to autoplay videos. WATCH FILM and SOUND ON still work.
-    const prefersLessMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches || false;
-    const saveData = navigator.connection?.saveData || false;
-    const allowAutomaticPlayback = !(prefersLessMotion || saveData);
-
-    function visibleFraction(element) {
-      const rect = element.getBoundingClientRect();
-      const width = Math.max(0, Math.min(rect.right, window.innerWidth) - Math.max(rect.left, 0));
-      const height = Math.max(0, Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0));
-      return rect.width > 0 && rect.height > 0 ? (width * height) / (rect.width * rect.height) : 0;
+  function safePlay(video) {
+    if (!video || !video.paused || video.error) return;
+    // Do not spam play() while buffering or while an earlier call is unresolved.
+    if (video._cwfPlayPending) return;
+    try {
+      const result = video.play();
+      if (result && typeof result.then === 'function') {
+        video._cwfPlayPending = true;
+        result.then(() => {
+          video._cwfPlayPending = false;
+          // A scroll/tab change may have happened while play() was pending.
+          updateVisiblePlayback();
+        }, error => {
+          video._cwfPlayPending = false;
+          if (error?.name !== 'AbortError' && error?.name !== 'NotAllowedError') {
+            console.warn('CWF video could not start:', error);
+          }
+          // No automatic retry here — avoids an endless play/reject loop.
+        });
+      }
+    } catch (error) {
+      console.warn('CWF video playback error:', error);
     }
+  }
 
-    function refreshTargets() {
-      observed.forEach(target => {
-        const fraction = visibleFraction(target);
-        const wasVisible = inView.get(target) || false;
-        if (fraction >= START_RATIO) inView.set(target, true);
-        else if (fraction <= STOP_RATIO) inView.set(target, false);
-        else if (!inView.has(target)) inView.set(target, wasVisible);
-      });
-    }
+  function visibleFraction(element) {
+    if (!element) return 0;
+    const rect = element.getBoundingClientRect();
+    if (!rect.width || !rect.height) return 0;
+    const visibleWidth = Math.max(0, Math.min(rect.right, window.innerWidth) - Math.max(rect.left, 0));
+    const visibleHeight = Math.max(0, Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0));
+    return (visibleWidth * visibleHeight) / (rect.width * rect.height);
+  }
 
-    function stopAllBackgroundVideos() {
+  function initPlayback() {
+    const projects = Array.from(document.querySelectorAll('.film-project'));
+    const heroVideo = document.querySelector('[data-hero-video]');
+    const heroTarget = document.querySelector('[data-hero-shell]') || heroVideo;
+    const modal = document.querySelector('[data-film-modal]');
+    const modalVideo = modal?.querySelector('.film-modal__video');
+    const mediaFor = project => project.querySelector('.film-media') || project;
+    let scheduled = false;
+
+    const saveData = navigator.connection?.saveData === true;
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true;
+    const allowAutoPlay = !saveData && !reduceMotion;
+
+    const playIfReady = video => {
+      if (video?.paused && !video._cwfPlayPending) safePlay(video);
+    };
+
+    function pauseAllBackground() {
       heroVideo?.pause();
-      projects.forEach(project => project.querySelector("[data-film-preview]")?.pause());
+      projects.forEach(project => project.querySelector('[data-film-preview]')?.pause());
+    }
+
+    function pickActiveProject() {
+      let best = null;
+      let bestRatio = ENTER_RATIO;
+      for (const project of projects) {
+        const ratio = visibleFraction(mediaFor(project));
+        if (ratio >= bestRatio) {
+          bestRatio = ratio;
+          best = project;
+        }
+      }
+      if (activeProject) {
+        const currentRatio = visibleFraction(mediaFor(activeProject));
+        // Hysteresis prevents rapid sound/video switching at card boundaries.
+        if (currentRatio >= KEEP_RATIO && (!best || bestRatio - currentRatio < SWITCH_ADVANTAGE)) {
+          return activeProject;
+        }
+      }
+      return best;
     }
 
     updateVisiblePlayback = () => {
-      const modalIsOpen = document.querySelector("[data-film-modal]")?.classList.contains("is-open");
-      if (document.hidden || modalIsOpen || !allowAutomaticPlayback) {
-        stopAllBackgroundVideos();
+      const blocked = document.hidden || modal?.classList.contains('is-open');
+      if (blocked) {
+        pauseAllBackground();
+        muteAllPreviews(projects);
+        activeProject = null;
+        return;
+      }
+      if (!allowAutoPlay) {
+        // Honor a manually started preview without automatically starting others.
+        heroVideo?.pause();
+        for (const project of projects) {
+          if (project === activeProject && visibleFraction(mediaFor(project)) >= KEEP_RATIO) continue;
+          project.querySelector('[data-film-preview]')?.pause();
+          mutePreview(project);
+          if (project === activeProject) activeProject = null;
+        }
         return;
       }
 
-      // Hero keeps its original, full-length loop. It pauses when below the
-      // Hero section and resumes at the exact previous timestamp on return.
+      // The full original Hero retains its natural duration and its HTML loop.
+      // It pauses outside the viewport; currentTime is NEVER changed by this script.
       if (heroVideo) {
-        if (heroTarget && inView.get(heroTarget)) {
-          if (heroVideo.paused) heroVideo.play().catch(() => {});
-        } else {
-          heroVideo.pause();
-        }
+        if (visibleFraction(heroTarget) >= KEEP_RATIO) playIfReady(heroVideo);
+        else heroVideo.pause();
       }
 
-      projects.forEach(project => {
-        const video = project.querySelector("[data-film-preview]");
-        if (!video) return;
-        if (inView.get(project)) startPreview(project);
-        else video.pause(); // Keeps currentTime; does not restart the movie.
+      const selected = pickActiveProject();
+      if (selected !== activeProject) {
+        if (activeProject) mutePreview(activeProject);
+        activeProject = selected;
+      }
+
+      for (const project of projects) {
+        const video = project.querySelector('[data-film-preview]');
+        if (!video) continue;
+        if (project !== activeProject) {
+          if (!video.paused) video.pause();
+          if (!video.muted) mutePreview(project);
+        } else {
+          // Playback starts muted. SOUND ON is always a user action.
+          if (project.dataset.previewStarted !== 'true') {
+            project.dataset.previewStarted = 'true';
+            video.muted = true;
+          }
+          playIfReady(video);
+        }
+      }
+    };
+
+    const scheduleUpdate = () => {
+      if (scheduled) return;
+      scheduled = true;
+      window.requestAnimationFrame(() => {
+        scheduled = false;
+        updateVisiblePlayback();
       });
     };
 
-    refreshTargets();
-    updateVisiblePlayback();
-
-    if ("IntersectionObserver" in window) {
-      const observer = new IntersectionObserver(entries => {
-        entries.forEach(entry => {
-          const wasVisible = inView.get(entry.target) || false;
-          if (entry.intersectionRatio >= START_RATIO) inView.set(entry.target, true);
-          else if (entry.intersectionRatio <= STOP_RATIO) inView.set(entry.target, false);
-          else inView.set(entry.target, wasVisible);
-        });
-        updateVisiblePlayback();
-      }, {
-        threshold: [0, STOP_RATIO, START_RATIO, 0.35, 0.65, 1],
-        rootMargin: "0px"
+    projects.forEach(project => {
+      const video = project.querySelector('[data-film-preview]');
+      const poster = project.querySelector('.film-poster');
+      const media = mediaFor(project);
+      if (!video) return;
+      setSoundButton(project, false);
+      video.muted = true;
+      video.playsInline = true;
+      // Avoid preloading every very large documentary on page load.
+      if (video.readyState === 0) video.preload = 'none';
+      poster?.addEventListener('error', () => { poster.hidden = true; }, { once: true });
+      video.addEventListener('playing', () => {
+        // Guard against a delayed play() finally starting after a user has
+        // already scrolled to a different film (the reported audio bug).
+        if (document.hidden || modal?.classList.contains('is-open') ||
+            activeProject !== project || visibleFraction(media) < KEEP_RATIO) {
+          video.pause();
+          mutePreview(project);
+          return;
+        }
+        media.classList.add('is-playing');
       });
-      observed.forEach(target => observer.observe(target));
-    } else {
-      // Fallback for older browsers: lightweight, frame-throttled visibility check.
-      let scheduled = false;
-      const check = () => {
-        if (scheduled) return;
-        scheduled = true;
-        requestAnimationFrame(() => {
-          scheduled = false;
-          refreshTargets();
-          updateVisiblePlayback();
-        });
-      };
-      window.addEventListener("scroll", check, { passive: true });
-      window.addEventListener("resize", check, { passive: true });
-    }
+      video.addEventListener('error', () => media.classList.remove('is-playing'));
+      video.addEventListener('canplay', scheduleUpdate);
 
-    document.addEventListener("visibilitychange", updateVisiblePlayback);
-    window.addEventListener("pagehide", stopAllBackgroundVideos);
-    window.addEventListener("pageshow", () => {
-      refreshTargets();
-      updateVisiblePlayback();
-    });
-  }
-
-  document.addEventListener("DOMContentLoaded", () => {
-    initPreviewAutoplay();
-
-    document.querySelectorAll(".film-project").forEach(project => {
-      project.querySelector(".film-open")?.addEventListener("click", () => openModal(project));
-      project.querySelector("[data-film-sound]")?.addEventListener("click", event => {
+      project.querySelector('.film-open')?.addEventListener('click', () => openModal(project));
+      project.querySelector('[data-film-sound]')?.addEventListener('click', event => {
         event.preventDefault();
         event.stopPropagation();
-        togglePreviewSound(project);
+        if (modal?.classList.contains('is-open')) return;
+        // A click is a direct user gesture and may start playback with sound.
+        muteAllPreviews(projects, project);
+        if (!video.muted) {
+          mutePreview(project);
+          return;
+        }
+        if (activeProject && activeProject !== project) {
+          activeProject.querySelector('[data-film-preview]')?.pause();
+        }
+        activeProject = project;
+        video.muted = false;
+        video.volume = 1;
+        activeSoundVideo = video;
+        setSoundButton(project, true);
+        video.play()?.catch(error => {
+          if (error?.name !== 'AbortError') mutePreview(project);
+        });
       });
     });
 
-    document.querySelector("[data-film-close]")?.addEventListener("click", closeModal);
+    if (heroVideo) {
+      heroVideo.muted = true;
+      heroVideo.playsInline = true;
+      const shell = document.querySelector('[data-hero-shell]');
+      const markReady = () => shell?.classList.add('is-video-ready');
+      const showFallback = () => shell?.classList.remove('is-video-ready');
+      heroVideo.addEventListener('playing', () => {
+        if (document.hidden || modal?.classList.contains('is-open') ||
+            visibleFraction(heroTarget) < KEEP_RATIO || !allowAutoPlay) {
+          heroVideo.pause();
+        }
+      });
+      heroVideo.addEventListener('loadeddata', markReady);
+      heroVideo.addEventListener('canplay', markReady);
+      heroVideo.addEventListener('error', showFallback);
+      if (heroVideo.readyState >= 2) markReady();
+    }
 
-    document.querySelector("[data-film-modal]")?.addEventListener("click", event => {
-      if (event.target.matches("[data-film-modal]")) closeModal();
+    function projectSource(project) {
+      return project.dataset.fullSrc
+        || project.querySelector('[data-film-preview] source')?.getAttribute('src')
+        || project.querySelector('[data-film-preview]')?.getAttribute('src')
+        || '';
+    }
+
+    function openModal(project) {
+      if (!modal || !modalVideo) return;
+      const source = projectSource(project);
+      if (!source) return;
+      lastFocused = document.activeElement;
+      pauseAllBackground();
+      muteAllPreviews(projects);
+      activeProject = null;
+
+      const title = project.querySelector('.film-meta h3')?.textContent?.trim() || 'WEDDING FILM';
+      const location = project.querySelector('.film-meta p')?.textContent?.trim() || '';
+      const titleEl = modal.querySelector('[data-film-title]');
+      const locationEl = modal.querySelector('[data-film-location]');
+      if (titleEl) titleEl.textContent = title;
+      if (locationEl) locationEl.textContent = location;
+      modalVideo.src = source;
+      modalVideo.muted = false;
+      modalVideo.volume = 1;
+      modal.classList.add('is-open');
+      modal.setAttribute('aria-hidden', 'false');
+      document.body.classList.add('modal-open');
+      modal.querySelector('[data-film-close]')?.focus();
+      // Start within the click gesture; the browser controls are available if loading is slow.
+      safePlay(modalVideo);
+    }
+
+    function closeModal() {
+      if (!modal || !modalVideo || !modal.classList.contains('is-open')) return;
+      modal.classList.remove('is-open');
+      modal.setAttribute('aria-hidden', 'true');
+      document.body.classList.remove('modal-open');
+      modalVideo.pause();
+      modalVideo._cwfPlayPending = false;
+      modalVideo.removeAttribute('src');
+      modalVideo.load(); // Abort the large film transfer once the player is closed.
+      lastFocused?.focus();
+      scheduleUpdate();
+    }
+
+    modal?.querySelector('[data-film-close]')?.addEventListener('click', closeModal);
+    modal?.addEventListener('click', event => {
+      if (event.target === modal) closeModal();
+    });
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape') closeModal();
     });
 
-    document.addEventListener("keydown", event => {
-      if (event.key === "Escape" && document.querySelector("[data-film-modal]")?.classList.contains("is-open")) {
-        closeModal();
+    // IO handles entry/exit; the passive scroll listener also catches sticky Hero
+    // motion and CSS transforms that can lag between intersection callbacks.
+    if ('IntersectionObserver' in window) {
+      const observer = new IntersectionObserver(scheduleUpdate, {
+        threshold: [0, KEEP_RATIO, ENTER_RATIO, 0.5, 1]
+      });
+      if (heroTarget) observer.observe(heroTarget);
+      projects.forEach(project => observer.observe(mediaFor(project)));
+    }
+    window.addEventListener('scroll', scheduleUpdate, { passive: true });
+    window.addEventListener('resize', scheduleUpdate, { passive: true });
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        pauseAllBackground();
+        muteAllPreviews(projects);
+        activeProject = null;
+        modalVideo?.pause();
+      } else {
+        scheduleUpdate();
       }
     });
+    window.addEventListener('pagehide', () => {
+      pauseAllBackground();
+      muteAllPreviews(projects);
+      modalVideo?.pause();
+    });
+    window.addEventListener('pageshow', scheduleUpdate);
 
-    const heroVideo = document.querySelector("[data-hero-video]");
-    const heroShell = document.querySelector("[data-hero-shell]");
-    if (heroVideo && heroShell) {
-      const markReady = () => heroShell.classList.add("is-video-ready");
-      const keepFallback = () => heroShell.classList.remove("is-video-ready");
-      heroVideo.addEventListener("canplay", markReady, { once: true });
-      heroVideo.addEventListener("error", keepFallback);
-      if (heroVideo.readyState >= 3) markReady();
+    // First sync after the document is parsed and positioned.
+    scheduleUpdate();
+    window.CWFVideo = { closeModal };
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    // A small additive CSS file corrects the B&W portrait card. We load it here
+    // so the existing index.html / other styles are left untouched.
+    if (!document.querySelector('link[data-cwf-video-fixes]')) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = new URL('css/video-fixes.css', document.baseURI).href;
+      link.setAttribute('data-cwf-video-fixes', '');
+      document.head.appendChild(link);
     }
+    initPlayback();
   });
-
-  window.CWFVideo = { closeModal };
 })();
