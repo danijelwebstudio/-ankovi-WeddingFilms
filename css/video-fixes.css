@@ -19,3 +19,34 @@
     align-self: center;
   }
 }
+
+/* November mobile UI fixes: the header was below the menu overlay, so the
+   hamburger/close X could not be tapped. Keep it above the open menu. */
+@media (max-width: 860px) {
+  body.menu-open .site-header {
+    z-index: 70;
+    background: var(--color-light);
+    color: var(--color-dark);
+    backdrop-filter: none;
+  }
+  body.menu-open .site-header .brand-logo--light { opacity: 0; }
+  body.menu-open .site-header .brand-logo--dark { opacity: 1; }
+  body.menu-open .menu-toggle {
+    z-index: 71;
+    pointer-events: auto;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 12px 6px;
+    margin-right: -6px;
+  }
+  .section--films .films-list {
+    gap: clamp(116px, 15svh, 156px);
+  }
+}
+
+@media (max-width: 620px) {
+  /* More breathing space between the complete film cards. */
+  .section--films .films-list {
+    gap: clamp(128px, 17svh, 176px);
+  }
+}
