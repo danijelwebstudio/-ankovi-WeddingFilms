@@ -1480,3 +1480,53 @@ html[data-lang="sr"] [data-lang-option="sr"] {
 @media (max-width: 860px) {
   .section--testimonials .testimonial-stage { touch-action: pan-y; }
 }
+
+/* =============================================================
+   CWF — HERO FIRST FRAME + SUBTLE NAVBAR CONTRAST (NOV 2026)
+   Visual polish only. No footage, loop duration or other players modified.
+   ============================================================= */
+
+/* Clean dark first impression while the browser is buffering the Hero.
+   No visible development placeholder text or new poster asset. */
+.hero-fallback span { display: none !important; }
+.hero-fallback {
+  background:
+    radial-gradient(ellipse at 72% 28%, rgba(243, 240, 237, .065), transparent 48%),
+    linear-gradient(130deg, #151515, #0c0c0c 68%);
+}
+
+/* 'loadeddata' isn't playback: reveal after the FIRST 'playing' event.
+   After that, retain the last frame when returning from another section. */
+.hero-shell:not(.is-hero-started) .hero-video,
+.hero-shell.is-video-ready:not(.is-hero-started) .hero-video {
+  opacity: 0;
+}
+.hero-shell.is-video-ready.is-hero-started .hero-video {
+  opacity: 1;
+  transition-duration: .32s;
+}
+
+/* Keep the floating navigation legible on bright wedding footage.
+   Does not introduce a solid header bar or affect the scrolled light state. */
+body:not(.menu-open) .site-header:not(.is-light) {
+  background: linear-gradient(180deg,
+    rgba(10, 10, 10, .43) 0%,
+    rgba(10, 10, 10, .16) 64%,
+    rgba(10, 10, 10, 0) 100%);
+}
+body:not(.menu-open) .site-header:not(.is-light) .desktop-nav,
+body:not(.menu-open) .site-header:not(.is-light) .language-toggle {
+  text-shadow: 0 1px 9px rgba(0, 0, 0, .52);
+}
+body:not(.menu-open) .site-header:not(.is-light) .brand-logo--light {
+  filter: drop-shadow(0 1px 5px rgba(0, 0, 0, .4));
+}
+
+/* Improve readability of the existing CWF wordmark, without replacing it. */
+.site-header .brand { width: clamp(164px, 12.2vw, 194px); }
+@media (max-width: 620px) {
+  .site-header .brand { width: 150px; }
+  body:not(.menu-open) .site-header:not(.is-light) {
+    background: linear-gradient(180deg, rgba(10, 10, 10, .48), rgba(10, 10, 10, 0));
+  }
+}

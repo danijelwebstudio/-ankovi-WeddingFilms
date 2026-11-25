@@ -299,7 +299,23 @@
     });
   }
 
+  // Keep the full Lazar trailer unchanged. Only request more than metadata
+  // and wait for actual playback before fading away the initial dark stage.
+  function initHeroFirstPlayback() {
+    const video = document.querySelector('[data-hero-video]');
+    const shell = document.querySelector('[data-hero-shell]');
+    if (!video || !shell) return;
+
+    video.preload = 'auto'; // A hint; mobile browsers may ignore it.
+    const markStarted = () => shell.classList.add('is-hero-started');
+    video.addEventListener('playing', markStarted, { once: true });
+    if (!video.paused && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+      markStarted();
+    }
+  }
+
   document.addEventListener("DOMContentLoaded", () => {
+    initHeroFirstPlayback();
     initCountryPicker();
     initLanguage();
     initMobileMenu();
